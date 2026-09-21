@@ -22,3 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+public/projects/hankkipot.mp4
+public/projects/redis7.mp4
