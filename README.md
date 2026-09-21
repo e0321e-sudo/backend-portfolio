@@ -78,11 +78,7 @@ https://earthy-shop.com
 
 ## Portfolio
 
-배포 후 여기에 포트폴리오 주소를 추가할 예정입니다.
-
-예시:
-
-https://your-portfolio.vercel.app
+backend-portfolio-eta-five.vercel.app
 
 ---
 
