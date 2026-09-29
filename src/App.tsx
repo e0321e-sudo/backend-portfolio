@@ -1,9 +1,7 @@
 import {
   useEffect,
   useRef,
-  useState,
   type CSSProperties,
-  type MouseEvent,
 } from 'react'
 import {
   Route,
@@ -265,7 +263,7 @@ const projects: Project[] = [
         '직접 촬영한 사진을 엽서와 포스터로 판매하기 위해 상품 탐색부터 주문·결제·재고·관리자 기능과 실제 배포까지 구현한 개인 E-commerce 프로젝트입니다.',
 
     period: '2026.07.14 — 2026.08.26',
-    role: 'FULL STACK',
+    role: 'BACKEND / AI-ASSISTED FRONTEND',
 
     liveSite:
         'https://earthy-shop.com',
@@ -373,6 +371,11 @@ const projects: Project[] = [
             'GitHub Actions의 workflow_dispatch를 이용해 전체, 백엔드, 프론트엔드 배포를 선택적으로 실행하도록 구성했습니다. 백엔드는 Docker 이미지를 ECR에 Push한 뒤 AWS SSM을 통해 EC2에서 Docker Compose로 재배포합니다.',
       },
       {
+        title: 'AI-assisted development',
+        body:
+            'Codex를 활용해 프론트엔드 구현을 진행하고, 생성된 코드의 구조와 동작을 직접 검토하며 적용했습니다.',
+      },
+      {
         title: 'FRONTEND DELIVERY',
         body:
             '프론트엔드는 GitHub Actions에서 pnpm으로 Vite 프로젝트를 빌드한 뒤 S3에 배포하고 CloudFront 캐시를 무효화해 최신 화면이 반영되도록 구성했습니다.',
@@ -411,601 +414,80 @@ function App() {
    PORTFOLIO
 ========================================================= */
 
+const highlights: Record<string, { role: string; problem: string; result: string; stack: string }> = {
+  'hankki-pot': {
+    role: '알림 · 채팅 · 신고 도메인',
+    problem: 'Redis 캐싱과 Kafka 비동기 처리로 반복 조회와 메시지 실패 처리 개선. SSE 실시간 알림과 WebSocket / STOMP 채팅 구현.',
+    result: 'K6 · 1,000 VU Stress 테스트: p95 1.41초 → 약 277ms',
+    stack: 'Spring Boot / Redis / Kafka / SSE / WebSocket / STOMP / K6',
+  },
+  redis7: {
+    role: '개발자 프로필 · 동시성 제어 · 문서 정리',
+    problem: '제안서 제출에는 Redisson 분산 락, 리뷰 평점 갱신에는 낙관적 락을 적용해 도메인별 충돌 특성에 대응.',
+    result: '테스트 케이스 작성 및 3차례 QA · 커넥션 풀 조정 실험에서 약 30% 개선',
+    stack: 'Spring Boot / Redis / Redisson / MySQL / JPA',
+  },
+  earthy: {
+    role: '상품 · 장바구니 · 주문 · 결제 · 재고 · 주문 취소 · 배포',
+    problem: '멱등성 키와 서버 결제 검증으로 중복 요청에 대응하고, 결제·재고·취소 흐름의 데이터 정합성을 관리.',
+    result: 'AWS 배포 · Docker 컨테이너 운영 · GitHub Actions 배포 자동화',
+    stack: 'Spring Boot / MySQL / JPA / Docker / AWS / GitHub Actions',
+  },
+}
+const stackGroups = [
+  { name: 'Backend', description: '서비스의 핵심 로직과 데이터', items: ['Java', 'Spring Boot', 'JPA', 'MySQL'] },
+  { name: 'Data & Messaging', description: '캐싱 · 비동기 처리 · 동시성', items: ['Redis', 'Kafka'] },
+  { name: 'DevOps', description: '구현에서 배포까지', items: ['Docker', 'AWS', 'GitHub Actions'] },
+  { name: 'AI & Automation', description: '개발과 작업 흐름을 돕는 도구', items: ['Codex', 'ChatGPT', 'n8n'] },
+]
 function Portfolio() {
   const navigate = useNavigate()
-
-  const heroRef =
-      useRef<HTMLElement>(null)
-
-  const cursorRef =
-      useRef<HTMLDivElement>(null)
-
-  const previewRef =
-      useRef<HTMLDivElement>(null)
-
-  const [activeProject, setActiveProject] =
-      useState<Project | null>(null)
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-
-    const revealTargets =
-        document.querySelectorAll(
-            '.reveal',
-        )
-
-    const observer =
-        new IntersectionObserver(
-            (entries) => {
-              entries.forEach(
-                  (entry) => {
-                    if (
-                        entry.isIntersecting
-                    ) {
-                      entry.target.classList.add(
-                          'visible',
-                      )
-                    }
-                  },
-              )
-            },
-            {
-              threshold: 0.1,
-            },
-        )
-
-    revealTargets.forEach(
-        (target) => {
-          observer.observe(target)
-        },
-    )
-
-    const handleScroll = () => {
-      if (!heroRef.current) {
-        return
-      }
-
-      const scrollY =
-          window.scrollY
-
-      heroRef.current.style.setProperty(
-          '--hero-scroll',
-          `${Math.min(
-              scrollY * 0.12,
-              70,
-          )}px`,
-      )
-    }
-
-    window.addEventListener(
-        'scroll',
-        handleScroll,
-        {
-          passive: true,
-        },
-    )
-
-    return () => {
-      observer.disconnect()
-
-      window.removeEventListener(
-          'scroll',
-          handleScroll,
-      )
-    }
-  }, [])
-
-  const handleHeroMouseMove = (
-      e: MouseEvent<HTMLElement>,
-  ) => {
-    if (!heroRef.current) {
-      return
-    }
-
-    const rect =
-        heroRef.current.getBoundingClientRect()
-
-    const x =
-        e.clientX - rect.left
-
-    const y =
-        e.clientY - rect.top
-
-    const normalizedX =
-        (x / rect.width - 0.5) * 2
-
-    const normalizedY =
-        (y / rect.height - 0.5) * 2
-
-    heroRef.current.style.setProperty(
-        '--mouse-x',
-        `${x}px`,
-    )
-
-    heroRef.current.style.setProperty(
-        '--mouse-y',
-        `${y}px`,
-    )
-
-    // The spheres move only a few pixels while their highlight moves more,
-    // so the background feels dimensional without becoming distracting.
-    heroRef.current.style.setProperty(
-        '--orb1-x',
-        `${normalizedX * -12}px`,
-    )
-    heroRef.current.style.setProperty(
-        '--orb1-y',
-        `${normalizedY * -9}px`,
-    )
-    heroRef.current.style.setProperty(
-        '--orb2-x',
-        `${normalizedX * 15}px`,
-    )
-    heroRef.current.style.setProperty(
-        '--orb2-y',
-        `${normalizedY * 11}px`,
-    )
-    heroRef.current.style.setProperty(
-        '--orb3-x',
-        `${normalizedX * -8}px`,
-    )
-    heroRef.current.style.setProperty(
-        '--orb3-y',
-        `${normalizedY * 7}px`,
-    )
-
-    heroRef.current.style.setProperty(
-        '--sphere-light-x',
-        `${34 + normalizedX * 10}%`,
-    )
-    heroRef.current.style.setProperty(
-        '--sphere-light-y',
-        `${28 + normalizedY * 9}%`,
-    )
+  useEffect(() => { window.scrollTo(0, 0) }, [])
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }
-
-  const handleHeroMouseLeave = () => {
-    if (!heroRef.current) {
-      return
-    }
-
-    heroRef.current.style.setProperty('--orb1-x', '0px')
-    heroRef.current.style.setProperty('--orb1-y', '0px')
-    heroRef.current.style.setProperty('--orb2-x', '0px')
-    heroRef.current.style.setProperty('--orb2-y', '0px')
-    heroRef.current.style.setProperty('--orb3-x', '0px')
-    heroRef.current.style.setProperty('--orb3-y', '0px')
-    heroRef.current.style.setProperty('--sphere-light-x', '34%')
-    heroRef.current.style.setProperty('--sphere-light-y', '28%')
-  }
-
-  const handleMouseMove = (
-
-      e: MouseEvent<HTMLElement>,
-  ) => {
-    if (cursorRef.current) {
-      cursorRef.current.style.transform =
-          `translate3d(${e.clientX}px, ${e.clientY}px, 0)`
-    }
-
-    if (
-        previewRef.current &&
-        activeProject
-    ) {
-      const previewWidth = 360
-      const previewHeight = 250
-
-      let x =
-          e.clientX + 26
-
-      let y =
-          e.clientY + 22
-
-      if (
-          x + previewWidth >
-          window.innerWidth - 20
-      ) {
-        x =
-            e.clientX -
-            previewWidth -
-            26
-      }
-
-      if (
-          y + previewHeight >
-          window.innerHeight - 20
-      ) {
-        y =
-            e.clientY -
-            previewHeight -
-            22
-      }
-
-      previewRef.current.style.transform =
-          `translate3d(${x}px, ${y}px, 0)`
-    }
-  }
-
   return (
-      <main
-          className="portfolio"
-          onMouseMove={
-            handleMouseMove
-          }
-      >
-        {/* ================= HERO ================= */}
-
-        <section
-            ref={heroRef}
-            className="hero"
-            onMouseMove={
-              handleHeroMouseMove
-            }
-            onMouseLeave={
-              handleHeroMouseLeave
-            }
-        >
-          <div className="hero-depth">
-            <div className="hero-depth-circle circle-one" />
-            <div className="hero-depth-circle circle-two" />
-            <div className="hero-depth-circle circle-three" />
+    <main className="portfolio" id="top">
+      <a className="skip-link" href="#/" onClick={(event) => { event.preventDefault(); document.getElementById('projects')?.focus(); scrollToSection('projects') }}>프로젝트로 바로가기</a>
+      <header className="header page-width">
+        <a className="brand" href="#/" aria-label="Park Suji 홈">PARK SUJI<span>Backend Developer</span></a>
+        <nav aria-label="주요 메뉴">{[['projects', 'PROJECTS'], ['about', 'ABOUT'], ['stack', 'STACK'], ['contact', 'CONTACT']].map(([id, label]) => <button key={id} type="button" onClick={() => scrollToSection(id)}>{label}</button>)}</nav>
+      </header>
+      <section className="hero page-width">
+        <div className="hero-kicker"><span>JAVA / SPRING BOOT</span><span>PORTFOLIO · 2026</span></div>
+        <h1>BACKEND <span>DEVELOPER</span></h1>
+        <div className="hero-bottom">
+          <div className="hero-description">
+            <p className="hero-lead">안정적인 구조를 고민하고,<br />실제 문제를 코드로 해결합니다.</p>
+            <p className="hero-description-main">Backend developer focused on building reliable systems.</p>
+            <p className="hero-tech">Java · Spring Boot · MySQL · Redis · Kafka · Docker · AWS</p>
+            <button className="primary-button" type="button" onClick={() => scrollToSection('projects')}>프로젝트 살펴보기 <span aria-hidden="true">↗</span></button>
           </div>
-
-          <div className="hero-mouse-light" />
-
-          <header className="header">
-            <button
-                type="button"
-                onClick={() => {
-                  document
-                      .querySelector(
-                          '#about',
-                      )
-                      ?.scrollIntoView({
-                        behavior:
-                            'smooth',
-                      })
-                }}
-            >
-              ABOUT
-            </button>
-
-            <span>
-            ©2026, PARK SUJI
-          </span>
-
-            <button
-                type="button"
-                onClick={() => {
-                  document
-                      .querySelector(
-                          '#contact',
-                      )
-                      ?.scrollIntoView({
-                        behavior:
-                            'smooth',
-                      })
-                }}
-            >
-              CONTACT
-            </button>
-          </header>
-
-          <div className="hero-content">
-            <div className="hero-kicker">
-            <span>
-              BACKEND ENGINEERING
-            </span>
-
-              <span>
-              KOREA
-            </span>
-            </div>
-
-            <div className="hero-title-wrap">
-              <h1>
-                BACKEND
-              </h1>
-
-              <h1>
-                DEVELOPER
-              </h1>
-            </div>
-
-            <div className="hero-bottom">
-            <span className="scroll-mark">
-              ↓
-            </span>
-
-              <div className="hero-description">
-                <p className="hero-description-main">
-                  Backend developer
-                  focused on
-                  <br />
-                  building reliable
-                  systems.
-                </p>
-
-                <p className="hero-description-sub">
-                  Java, Spring Boot,
-                  Redis, Kafka,
-                  <br />
-                  MySQL and Docker.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ================= PROJECTS ================= */}
-
-        <section className="projects">
-          <div className="projects-heading">
-            <div className="reveal-wrapper">
-              <h2 className="reveal">
-                SELECTED
-                <br />
-                PROJECTS
-              </h2>
-            </div>
-          </div>
-
-          <div className="project-list">
-            {projects.map(
-                (
-                    project,
-                    index,
-                ) => (
-                    <button
-                        type="button"
-                        key={
-                          project.id
-                        }
-                        className={`project-item reveal reveal-delay-${
-                            index + 1
-                        }`}
-                        style={
-                          {
-                            '--project-color':
-                            project.color,
-                          } as CSSProperties
-                        }
-                        onMouseEnter={() =>
-                            setActiveProject(
-                                project,
-                            )
-                        }
-                        onMouseLeave={() =>
-                            setActiveProject(
-                                null,
-                            )
-                        }
-                        onClick={() =>
-                            navigate(
-                                `/projects/${project.slug}`,
-                            )
-                        }
-                    >
-                <span className="project-number">
-                  {project.id}
-                </span>
-
-                      <div className="project-main">
-                        <h3>
-                          {project.name}
-                        </h3>
-
-                        <span className="project-subtitle">
-                    {
-                      project.subtitle
-                    }
-                  </span>
-                      </div>
-
-                      <div className="project-right">
-                  <span>
-                    {
-                      project.type
-                    }
-                  </span>
-
-                        <span>
-                    ↗
-                  </span>
-                      </div>
-                    </button>
-                ),
-            )}
-          </div>
-        </section>
-
-        {/* ================= ABOUT ================= */}
-
-        <section
-            id="about"
-            className="content-section light-section"
-        >
-        <span className="section-label reveal">
-          ABOUT
-        </span>
-
-          <div className="reveal-wrapper">
-            <h2 className="macro-title reveal">
-              BUILD.
-              <br />
-              IMPROVE.
-              <br />
-              SOLVE.
-            </h2>
-          </div>
-
-          <div className="about-copy reveal">
-            <p>
-              안정적인 백엔드 구조를
-              고민하고,
-              실제 문제를 코드로
-              해결하는 개발자입니다.
-            </p>
-
-            <p>
-              기능 구현에서 끝나지 않고
-              동시성, 비동기 처리,
-              성능 테스트와 실제 배포까지
-              경험해 왔습니다.
-            </p>
-          </div>
-        </section>
-
-        {/* ================= STACK ================= */}
-
-        <section className="content-section dark-section">
-        <span className="section-label reveal">
-          STACK
-        </span>
-
-          <div className="reveal-wrapper">
-            <h2 className="macro-title reveal">
-              JAVA
-              <br />
-              SPRING
-              <br />
-              REDIS
-              <br />
-              KAFKA
-            </h2>
-          </div>
-
-          <div className="stack-bottom reveal">
-          <span>
-            MYSQL
-          </span>
-
-            <span>
-            DOCKER
-          </span>
-
-            <span>
-            AWS
-          </span>
-
-            <span>
-            REACT
-          </span>
-          </div>
-        </section>
-
-        {/* ================= CONTACT ================= */}
-
-        <section
-            id="contact"
-            className="content-section contact-section"
-        >
-        <span className="section-label reveal">
-          CONTACT
-        </span>
-
-          <div className="reveal-wrapper">
-            <h2 className="macro-title reveal">
-              LET'S
-              <br />
-              CONNECT.
-            </h2>
-          </div>
-
-          <div className="contact-bottom reveal">
-            <a
-                href="https://github.com/e0321e-sudo"
-                target="_blank"
-                rel="noreferrer"
-            >
-              GITHUB
-            </a>
-
-            <a href="mailto:brun0@naver.com">
-              brun0@naver.com
-            </a>
-
-            <a href="tel:01063179996">
-              010-6317-9996
-            </a>
-          </div>
-        </section>
-
-        {/* ================= CURSOR ================= */}
-
-        <div
-            ref={cursorRef}
-            className="custom-cursor"
-        />
-
-        {/* ================= PROJECT HOVER PREVIEW ================= */}
-
-        <div
-            ref={previewRef}
-            className={`project-preview ${
-                activeProject
-                    ? 'visible'
-                    : ''
-            }`}
-        >
-          {activeProject && (
-              <div
-                  className="preview-card"
-                  style={
-                    {
-                      '--preview-color':
-                      activeProject.color,
-                    } as CSSProperties
-                  }
-              >
-                <div className="preview-media">
-                  {activeProject.mediaType ===
-                  'video' ? (
-                      <video
-                          key={
-                            activeProject.media
-                          }
-                          src={
-                            activeProject.media
-                          }
-                          autoPlay
-                          muted
-                          loop
-                          playsInline
-                      />
-                  ) : (
-                      <img
-                          src={
-                            activeProject.media
-                          }
-                          alt={`${activeProject.name} preview`}
-                      />
-                  )}
-                </div>
-
-                <div className="preview-info">
-              <span>
-                {
-                  activeProject.id
-                }
-              </span>
-
-                  <span>
-                {
-                  activeProject.name
-                }
-              </span>
-
-                  <span>
-                {
-                  activeProject.type
-                }
-              </span>
-                </div>
-              </div>
-          )}
+          <aside className="hero-ai"><span className="eyebrow">DEVELOPMENT TOOLKIT</span><h2>AI-assisted development &amp; automation</h2><p>Codex · ChatGPT · n8n</p><p className="muted">결과를 검토하고 이해하며,<br />개발과 자동화에 적용합니다.</p></aside>
         </div>
-      </main>
+        <div className="experience-strip" aria-label="핵심 경험"><span>01 <strong>Redis · Kafka · 성능 검증</strong></span><span>02 <strong>동시성 제어 · 데이터 정합성</strong></span><span>03 <strong>AWS · Docker · 배포 자동화</strong></span></div>
+      </section>
+      <section className="projects section-pad" id="projects" tabIndex={-1}>
+        <div className="page-width">
+          <div className="section-heading"><div><span className="eyebrow">SELECTED PROJECTS</span><h2>구현을 넘어, 문제 해결까지.</h2></div><p>담당한 도메인과 기술 선택,<br />검증과 배포의 기록입니다.</p></div>
+          <div className="project-list">{projects.map((project) => {
+            const summary = highlights[project.slug]
+            return <article className="project-card" key={project.id}>
+              <div className="project-heading"><span className="project-number">{project.id}</span><div><span className="eyebrow">{project.type} / BACKEND</span><h3>{project.name}</h3><p className="project-subtitle">{project.subtitle}</p></div><span className="project-period">{project.period}</span></div>
+              <div className="project-summary"><div><span className="summary-label">담당 역할</span><p>{summary.role}</p></div><div><span className="summary-label">문제와 해결</span><p>{summary.problem}</p></div><div className="project-result"><span className="summary-label">검증 · 안정성 · 배포</span><p>{summary.result}</p></div></div>
+              <div className="project-card-footer"><p>{summary.stack}</p><button type="button" onClick={() => navigate(`/projects/${project.slug}`)} aria-label={`${project.name} 상세 보기`}>상세 보기 <span aria-hidden="true">↗</span></button></div>
+            </article>
+          })}</div>
+        </div>
+      </section>
+      <section id="about" className="content-section page-width section-pad">
+        <div><span className="eyebrow">ABOUT</span><h2>BUILD.<br />IMPROVE.<br />SOLVE.</h2></div>
+        <div className="about-copy"><p>안정적인 백엔드 구조를 고민하고, 실제 문제를 코드로 해결하는 개발자입니다.</p><p>기능 구현에서 끝나지 않고 동시성, 비동기 처리, 성능 테스트와 실제 배포까지 경험해 왔습니다.</p><p>개발 과정에서 Codex와 ChatGPT 등의 AI 도구를 활용해 코드 구조를 분석하고 구현 및 오류 해결에 적용하고 있습니다. 생성된 결과를 그대로 사용하는 것이 아니라 동작 원인과 구조를 확인한 뒤 적용하는 것을 중요하게 생각합니다. 또한 n8n을 활용한 자동화를 구현하며 AI와 자동화 도구를 실제 작업 흐름에 적용하는 경험을 확장하고 있습니다.</p></div>
+      </section>
+      <section id="stack" className="stack-section section-pad"><div className="page-width"><div className="section-heading"><div><span className="eyebrow">STACK</span><h2>백엔드를 중심으로.</h2></div><p>서비스 구현과 안정적인 운영을 위한 기술</p></div><div className="stack-grid">{stackGroups.map((group) => <article className="stack-card" key={group.name}><h3>{group.name}</h3><p>{group.description}</p><ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul></article>)}</div><p className="supporting-stack">프로젝트 내 활용: React · TypeScript — EARTHY의 AI-assisted 프론트엔드 구현</p></div></section>
+      <section className="automation-section page-width section-pad" aria-labelledby="automation-title"><div><span className="eyebrow">SUPPORTING EXPERIENCE</span><h2 id="automation-title">AI &amp; Automation Experience</h2><p>백엔드 개발 경험을 확장하는<br />도구 활용과 자동화 경험입니다.</p></div><ul><li>n8n 기반 업무 및 콘텐츠 자동화 워크플로우 구현</li><li>API 연동 및 데이터 처리 자동화</li><li>AI 모델을 활용한 콘텐츠 생성 흐름 구성</li><li>Codex / ChatGPT를 활용한 개발 및 문제 해결</li><li>자동화 과정에서 발생하는 오류를 확인하고 수정하며 워크플로우 개선</li></ul></section>
+      <section id="contact" className="contact-section section-pad"><div className="page-width"><span className="eyebrow">CONTACT</span><h2>LET’S CONNECT.</h2><div className="contact-bottom"><a href="https://github.com/e0321e-sudo" target="_blank" rel="noreferrer">GITHUB ↗</a><a href="mailto:brun0@naver.com">brun0@naver.com ↗</a><a href="tel:01063179996">010-6317-9996 ↗</a></div><p className="copyright">©2026, PARK SUJI · BACKEND DEVELOPER</p></div></section>
+    </main>
   )
 }
 
